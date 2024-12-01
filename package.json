@@ -1,0 +1,56 @@
+{
+  "name": "@sotatech/query3",
+  "version": "1.0.0",
+  "private": false,
+  "description": "A flexible query handler for MongoDB using Mongoose",
+  "keywords": [
+    "nodejs",
+    "nats",
+    "messaging",
+    "pubsub",
+    "sotaaaaa"
+  ],
+  "homepage": "https://github.com/sotamaze/query3#readme",
+  "bugs": {
+    "url": "https://github.com/sotamaze/query3/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sotamaze/query3.git"
+  },
+  "author": "SOTA <dungla2708@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "start:dev": "ts-node src/main.ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^18.15.11",
+    "eslint": "^8.28.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "jest": "^29.7.0",
+    "prettier": "^2.8.4",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "mongoose": "^8.8.3",
+    "rimraf": "^3.0.2"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
