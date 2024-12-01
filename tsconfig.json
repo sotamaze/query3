@@ -18,6 +18,6 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*", "__mock__/**/*", "__test__/**/*"],
+  "include": ["src/**/*", "__mock__/**/*", "__test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

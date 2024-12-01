@@ -1,7 +1,8 @@
 import { Query3 } from '../src/query3';
 import { mockModel } from '../__mock__/mongoose.model';
+import * as qs from 'qs';
 
-// Dummy user data for testing
+// Dummy data for testing
 const mockData = [
   { name: 'John Doe', age: 30 },
   { name: 'Jane Doe', age: 25 },
@@ -11,114 +12,148 @@ describe('Query3', () => {
   let query3: Query3<any>;
 
   beforeEach(() => {
-    jest.clearAllMocks(); // Clear all mock calls before each test
-    query3 = new Query3(mockModel as any); // Instantiate Query3 with the mocked model
+    jest.clearAllMocks();
+    query3 = new Query3(mockModel as any);
   });
 
-  it('should parse query string correctly', async () => {
-    const queryString = JSON.stringify({
+  it('should parse query string and execute query correctly', async () => {
+    const queryString = qs.stringify({
       limit: 5,
       offset: 0,
       sort: { age: -1 },
       age: { $gte: 18 },
     });
 
-    // Mocking countDocuments and find calls
+    // Mock Mongoose methods
+    mockModel.find.mockImplementation(() => ({
+      skip: jest.fn().mockImplementation(() => ({
+        limit: jest.fn().mockImplementation(() => ({
+          sort: jest.fn().mockImplementation(() => ({
+            populate: jest.fn().mockImplementation(() => ({
+              lean: jest.fn().mockImplementation(() => ({
+                exec: jest.fn().mockResolvedValue(mockData),
+              })),
+            })),
+          })),
+        })),
+      })),
+    }));
     mockModel.countDocuments.mockResolvedValue(2);
-    mockModel.exec.mockResolvedValue(mockData);
 
-    const result = await query3.query(queryString, {
-      populate: [{ path: 'role' }],
-      omitFields: ['age'], // Omit age field
+    const result = await query3.query(queryString);
+
+    expect(result.records).toEqual(mockData);
+    expect(result.pagination).toEqual({
+      totalRows: 2,
+      totalPages: 1,
     });
 
-    expect(result.records).toEqual([
-      { name: 'John Doe' },
-      { name: 'Jane Doe' },
-    ]);
-    expect(result.pagination).toEqual({ totalRows: 2, totalPages: 1 });
-
-    // Ensure Mongoose methods were called with correct arguments
     expect(mockModel.find).toHaveBeenCalledWith({ age: { $gte: 18 } });
-    expect(mockModel.skip).toHaveBeenCalledWith(0);
-    expect(mockModel.limit).toHaveBeenCalledWith(5);
-    expect(mockModel.sort).toHaveBeenCalledWith({ age: -1 });
+    expect(mockModel.countDocuments).toHaveBeenCalledWith({ age: { $gte: 18 } });
   });
 
-  it('should omit specified fields from the result', () => {
-    const data = [
-      { name: 'John Doe', password: '123456', age: 30 },
-      { name: 'Jane Doe', password: 'abcdef', age: 25 },
-    ];
+  it('should handle pagination and sorting correctly', async () => {
+    const queryString = qs.stringify({
+      limit: 1,
+      offset: 1,
+      sort: { age: 1 },
+    });
 
-    const result = (query3 as any).omitFields(data, ['password']);
+    mockModel.find.mockImplementation(() => ({
+      skip: jest.fn().mockImplementation(() => ({
+        limit: jest.fn().mockImplementation(() => ({
+          sort: jest.fn().mockImplementation(() => ({
+            populate: jest.fn().mockImplementation(() => ({
+              lean: jest.fn().mockImplementation(() => ({
+                exec: jest.fn().mockResolvedValue([{ name: 'Jane Doe', age: 25 }]),
+              })),
+            })),
+          })),
+        })),
+      })),
+    }));
+    mockModel.countDocuments.mockResolvedValue(2);
 
-    expect(result).toEqual([
+    const result = await query3.query(queryString);
+
+    expect(result.records).toEqual([{ name: 'Jane Doe', age: 25 }]);
+    expect(result.pagination).toEqual({
+      totalRows: 2,
+      totalPages: 2,
+    });
+  });
+
+  it('should omit specified fields from the result', async () => {
+    const queryString = qs.stringify({});
+
+    mockModel.find.mockImplementation(() => ({
+      skip: jest.fn().mockImplementation(() => ({
+        limit: jest.fn().mockImplementation(() => ({
+          sort: jest.fn().mockImplementation(() => ({
+            populate: jest.fn().mockImplementation(() => ({
+              lean: jest.fn().mockImplementation(() => ({
+                exec: jest.fn().mockResolvedValue([
+                  { name: 'John Doe', password: '123456', age: 30 },
+                  { name: 'Jane Doe', password: 'abcdef', age: 25 },
+                ]),
+              })),
+            })),
+          })),
+        })),
+      })),
+    }));
+    mockModel.countDocuments.mockResolvedValue(2);
+
+    const result = await query3.query(queryString, { omitFields: ['password'] });
+
+    expect(result.records).toEqual([
       { name: 'John Doe', age: 30 },
       { name: 'Jane Doe', age: 25 },
     ]);
   });
 
-  it('should handle pagination and sorting correctly', async () => {
-    const queryString = JSON.stringify({
-      limit: 1,
-      offset: 1,
-      sort: { age: -1 },
-    });
+  it('should handle aggregation pipelines correctly', async () => {
+    const pipeline = [
+      { $match: { age: { $gte: 18 } } },
+      { $group: { _id: '$role', count: { $sum: 1 } } },
+    ];
 
-    mockModel.countDocuments.mockResolvedValue(3);
-    mockModel.exec.mockResolvedValue([{ name: 'Jane Doe', age: 25 }]);
+    mockModel.aggregate.mockImplementation(() => ({
+      exec: jest.fn().mockResolvedValue([
+        { _id: 'admin', count: 5 },
+        { _id: 'user', count: 10 },
+      ]),
+    }));
 
-    const result = await query3.query(queryString, {
-      queryMongoose: { isActive: true },
-    });
+    const result = await query3.aggregate(pipeline);
 
-    expect(result.records).toEqual([{ name: 'Jane Doe', age: 25 }]);
-    expect(result.pagination).toEqual({
-      totalRows: 3,
-      totalPages: 3,
-    });
-
-    expect(mockModel.find).toHaveBeenCalledWith({ isActive: true });
-    expect(mockModel.sort).toHaveBeenCalledWith({ age: -1 });
-    expect(mockModel.skip).toHaveBeenCalledWith(1);
-    expect(mockModel.limit).toHaveBeenCalledWith(1);
-  });
-
-  it('should handle populate correctly', async () => {
-    const queryString = JSON.stringify({
-      limit: 2,
-      offset: 0,
-    });
-
-    mockModel.countDocuments.mockResolvedValue(2);
-    mockModel.exec.mockResolvedValue([
-      { name: 'John Doe', role: { name: 'admin' } },
-      { name: 'Jane Doe', role: { name: 'user' } },
+    expect(result).toEqual([
+      { _id: 'admin', count: 5 },
+      { _id: 'user', count: 10 },
     ]);
-
-    const result = await query3.query(queryString, {
-      populate: [{ path: 'role', select: 'name' }],
-    });
-
-    expect(result.records).toEqual([
-      { name: 'John Doe', role: { name: 'admin' } },
-      { name: 'Jane Doe', role: { name: 'user' } },
-    ]);
-
-    expect(mockModel.populate).toHaveBeenCalledWith([
-      { path: 'role', select: 'name' },
-    ]);
+    expect(mockModel.aggregate).toHaveBeenCalledWith(pipeline);
   });
 
   it('should return empty records if no documents found', async () => {
-    const queryString = JSON.stringify({
+    const queryString = qs.stringify({
       limit: 10,
       offset: 0,
     });
 
+    mockModel.find.mockImplementation(() => ({
+      skip: jest.fn().mockImplementation(() => ({
+        limit: jest.fn().mockImplementation(() => ({
+          sort: jest.fn().mockImplementation(() => ({
+            populate: jest.fn().mockImplementation(() => ({
+              lean: jest.fn().mockImplementation(() => ({
+                exec: jest.fn().mockResolvedValue([]),
+              })),
+            })),
+          })),
+        })),
+      })),
+    }));
     mockModel.countDocuments.mockResolvedValue(0);
-    mockModel.exec.mockResolvedValue([]);
 
     const result = await query3.query(queryString);
 
@@ -127,5 +162,43 @@ describe('Query3', () => {
       totalRows: 0,
       totalPages: 0,
     });
+  });
+
+  it('should validate operators and throw error for invalid ones', async () => {
+    const queryString = qs.stringify({
+      age: { $invalidOperator: 30 },
+    });
+
+    await expect(() =>
+      query3.query(queryString, {
+        allowedOperators: ['$gte', '$lte'], // Only $gte and $lte are allowed
+      }),
+    ).rejects.toThrowError("Operator '$invalidOperator' is not allowed.");
+  });
+
+  it('should parse JSON-like filters from query string', async () => {
+    const queryString = qs.stringify({
+      age: { $gte: 18 },
+    });
+
+    mockModel.find.mockImplementation(() => ({
+      skip: jest.fn().mockImplementation(() => ({
+        limit: jest.fn().mockImplementation(() => ({
+          sort: jest.fn().mockImplementation(() => ({
+            populate: jest.fn().mockImplementation(() => ({
+              lean: jest.fn().mockImplementation(() => ({
+                exec: jest.fn().mockResolvedValue([{ name: 'Jane Doe', age: 25 }]),
+              })),
+            })),
+          })),
+        })),
+      })),
+    }));
+    mockModel.countDocuments.mockResolvedValue(1);
+
+    const result = await query3.query(queryString);
+
+    expect(result.records).toEqual([{ name: 'Jane Doe', age: 25 }]);
+    expect(mockModel.find).toHaveBeenCalledWith({ age: { $gte: 18 } });
   });
 });

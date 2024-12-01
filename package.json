@@ -1,6 +1,6 @@
 {
   "name": "@sotatech/query3",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": false,
   "description": "A flexible query handler for MongoDB using Mongoose",
   "keywords": [
@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "mongoose": "^8.8.3",
+    "qs": "^6.13.1",
     "rimraf": "^3.0.2"
   },
   "files": [

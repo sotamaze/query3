@@ -1,4 +1,3 @@
-// __mocks__/mongoose.model.ts
 export const mockModel = {
   find: jest.fn().mockReturnThis(),
   skip: jest.fn().mockReturnThis(),
@@ -8,5 +7,5 @@ export const mockModel = {
   lean: jest.fn().mockReturnThis(),
   exec: jest.fn(),
   countDocuments: jest.fn(),
-  aggregate: jest.fn(),
+  aggregate: jest.fn().mockReturnThis(),
 };

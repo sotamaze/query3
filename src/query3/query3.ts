@@ -1,7 +1,7 @@
 import { Model, FilterQuery, PipelineStage } from 'mongoose';
+import * as qs from 'qs';
 import {
   Query3Options,
-  Query3Parse,
   ParseQueryResult,
   PaginationResult,
 } from './query3.type';
@@ -33,11 +33,11 @@ export class Query3<T> {
    * @param allowedOperators - The list of operators allowed for this query.
    */
   private validateOperators(
-    query: Query3Parse,
+    query: Record<string, any>,
     allowedOperators: string[],
   ): void {
     Object.entries(query).forEach(([key, value]) => {
-      if (typeof value === 'object') {
+      if (typeof value === 'object' && value !== null) {
         Object.keys(value).forEach((operator) => {
           if (!allowedOperators.includes(operator)) {
             throw new Error(`Operator '${operator}' is not allowed.`);
@@ -50,7 +50,7 @@ export class Query3<T> {
   /**
    * Parses the query string into a structured MongoDB query object.
    *
-   * @param queryString - The query string from the client (JSON format).
+   * @param queryString - The query string from the client (e.g., "?limit=10&offset=0").
    * @param options - Additional options for the query.
    * @returns A structured MongoDB query object with filters, limits, offsets, etc.
    */
@@ -58,34 +58,52 @@ export class Query3<T> {
     queryString: string,
     options: Query3Options<T>,
   ): ParseQueryResult<T> {
-    const query: Query3Parse = JSON.parse(queryString);
+    const parsedQuery = qs.parse(queryString, {
+      ignoreQueryPrefix: true,
+      depth: 5, // Allow parsing nested objects
+    });
 
-    const {
-      limit = DefaultLimit,
-      offset = DefaultOffset,
-      sort,
-      justOne = false,
-      count = false,
-      ...filters
-    } = query;
+    const limit = Number(parsedQuery.limit || DefaultLimit);
+    const offset = Number(parsedQuery.offset || DefaultOffset);
+    const sort = parsedQuery.sort || {};
+    const count = parsedQuery.count === 'true';
+    const justOne = parsedQuery.justOne === 'true';
+
+    // Convert filters to their appropriate types
+    const filters = Object.entries(parsedQuery)
+      .filter(
+        ([key]) =>
+          !['limit', 'offset', 'sort', 'count', 'justOne'].includes(key),
+      )
+      .reduce((acc, [key, value]) => {
+        if (typeof value === 'string' && value.startsWith('{')) {
+          acc[key] = JSON.parse(value); // Parse JSON-like strings
+        } else if (typeof value === 'object' && value !== null) {
+          // Recursively parse objects
+          acc[key] = Object.entries(value).reduce(
+            (subAcc, [subKey, subValue]) => {
+              subAcc[subKey] = isNaN(Number(subValue))
+                ? subValue
+                : Number(subValue); // Convert numeric strings to numbers
+              return subAcc;
+            },
+            {},
+          );
+        } else {
+          acc[key] = isNaN(Number(value)) ? value : Number(value);
+        }
+        return acc;
+      }, {} as Record<string, any>);
 
     const allowedOperators =
       options.allowedOperators || DefaultAllowedOperators;
-    this.validateOperators(filters, allowedOperators); // Validate operators in the query
-
-    const parsedFilters = Object.entries(filters).reduce(
-      (acc, [key, value]) => {
-        acc[key as keyof T] = typeof value === 'object' ? { ...value } : value;
-        return acc;
-      },
-      {} as Record<keyof T, any>,
-    ) as FilterQuery<T>;
+    this.validateOperators(filters, allowedOperators); // Validate operators
 
     return {
-      filter: parsedFilters,
-      limit: Number(limit),
-      offset: Number(offset),
-      sort: sort || {},
+      filter: filters as FilterQuery<T>,
+      limit,
+      offset,
+      sort,
       count,
       justOne,
       cacheTimeMs: 0,
@@ -96,7 +114,7 @@ export class Query3<T> {
    * Executes a query based on the provided query string and options.
    * Supports filtering, pagination, field omission, and population.
    *
-   * @param queryString - The query string from the client (JSON format).
+   * @param queryString - The query string from the client (e.g., "?limit=10&offset=0").
    * @param options - Additional query options, such as populate, omitFields, and custom filters.
    * @returns The query results and pagination metadata.
    */
@@ -157,7 +175,6 @@ export class Query3<T> {
    * Executes an aggregation pipeline on the model.
    *
    * @param pipeline - The aggregation pipeline stages.
-   * @param options - Additional options for the aggregation query.
    * @returns The result of the aggregation pipeline.
    */
   public async aggregate(pipeline: PipelineStage[]): Promise<any[]> {

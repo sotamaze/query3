@@ -1,3 +1,4 @@
+
 # `@sotatech/query3`
 
 A powerful and flexible query handler for MongoDB models using Mongoose.  
@@ -37,7 +38,9 @@ import { UserModel } from './models/user.model'; // Your Mongoose model
 ### **Basic Query Usage**
 #### Example:
 ```typescript
-const queryString = JSON.stringify({
+import qs from 'qs';
+
+const queryString = qs.stringify({
   limit: 10,
   offset: 0,
   sort: { age: -1 },
@@ -192,7 +195,7 @@ If an unsupported operator is used, an error will be thrown.
 
 #### Example:
 ```typescript
-const queryString = JSON.stringify({
+const queryString = qs.stringify({
   age: { $invalidOperator: 30 },
 });
 
