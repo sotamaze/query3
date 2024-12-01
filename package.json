@@ -4,11 +4,20 @@
   "private": false,
   "description": "A flexible query handler for MongoDB using Mongoose",
   "keywords": [
+    "query",
+    "mongoose",
+    "mongodb",
+    "pagination",
+    "aggregation",
+    "typescript",
+    "filter",
+    "sorting",
+    "query-builder",
+    "data-handling",
+    "data-processing",
+    "sotatech",
     "nodejs",
-    "nats",
-    "messaging",
-    "pubsub",
-    "sotaaaaa"
+    "typescript-library"
   ],
   "homepage": "https://github.com/sotamaze/query3#readme",
   "bugs": {
