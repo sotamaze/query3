@@ -15,7 +15,7 @@ import {
  * Query3 - A flexible query handler for MongoDB models.
  * Supports advanced filtering, pagination, operator validation, and aggregation pipelines.
  */
-export class Query3<T> {
+export class Query3<T = any> {
   private model: Model<T>;
 
   /**

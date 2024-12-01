@@ -1,4 +1,4 @@
-import { PopulateOptions, FilterQuery, PipelineStage } from 'mongoose';
+import { PopulateOptions, FilterQuery } from 'mongoose';
 
 /**
  * Query3Parse - Represents the raw query string parsed into a key-value object.
