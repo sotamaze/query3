@@ -10,6 +10,6 @@ exports.mockModel = {
     lean: jest.fn().mockReturnThis(),
     exec: jest.fn(),
     countDocuments: jest.fn(),
-    aggregate: jest.fn(),
+    aggregate: jest.fn().mockReturnThis(),
 };
 //# sourceMappingURL=mongoose.model.js.map

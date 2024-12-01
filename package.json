@@ -1,6 +1,6 @@
 {
   "name": "@sotatech/query3",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": false,
   "description": "A flexible query handler for MongoDB using Mongoose",
   "keywords": [
@@ -43,6 +43,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^18.15.11",
+    "@types/qs": "^6.9.17",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",

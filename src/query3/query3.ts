@@ -1,4 +1,4 @@
-import { Model, FilterQuery, PipelineStage } from 'mongoose';
+import { Model, FilterQuery, PipelineStage, PopulateOptions } from 'mongoose';
 import * as qs from 'qs';
 import {
   Query3Options,
@@ -82,7 +82,7 @@ export class Query3<T> {
           // Recursively parse objects
           acc[key] = Object.entries(value).reduce(
             (subAcc, [subKey, subValue]) => {
-              subAcc[subKey] = isNaN(Number(subValue))
+              (subAcc as Record<string, any>)[subKey] = isNaN(Number(subValue))
                 ? subValue
                 : Number(subValue); // Convert numeric strings to numbers
               return subAcc;
@@ -140,7 +140,7 @@ export class Query3<T> {
       .skip(offset)
       .limit(limit)
       .sort(sort)
-      .populate(options.populate)
+      .populate(options.populate as PopulateOptions | PopulateOptions[])
       .lean()
       .exec()) as T[];
 
